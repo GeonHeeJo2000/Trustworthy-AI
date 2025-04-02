@@ -43,15 +43,12 @@ https://ossci-datasets.s3.amazonaws.com/mnist/t10k-images-idx3-ubyte.gz
 https://ossci-datasets.s3.amazonaws.com/mnist/t10k-labels-idx1-ubyte.gz  
 ```
 
-
 ### 2. CIFAR-10
 - CIFAR-10 **downloads automatically** when using `torchvision.datasets.CIFAR10(..., download=True)`
 
 ---
 
 ## 🚀 How to Run
-1. Prepare datasets as described above
-2. Run either:
 
 ```bash
 python test.py
@@ -62,5 +59,4 @@ or open:
 ```bash
 test.ipynb
 ```
-
 📌 *You can freely switch between MNIST and CIFAR by changing the model and dataset loaders in `test.py` or `test.ipynb`*
