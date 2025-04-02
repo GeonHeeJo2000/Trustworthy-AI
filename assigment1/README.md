@@ -16,7 +16,10 @@ Trustworthy-AI
 └── assignment1/
     ├── test.py          # Script for training and running attacks
     ├── test.ipynb       # Jupyter notebook version for interactive experiments 
-    ├── data             # Contains manually downloaded datasets (e.g., MNIST, CIFAR)
+    ├── data/            # Contains manually downloaded datasets (e.g., MNIST, CIFAR)
+    │   └── MNIST/
+    │       └── raw/     # Raw MNIST dataset files should be placed here
+    │                    # Download from: http://yann.lecun.com/exdb/mnist/
     └── requirements.txt # Python dependencies for this assignment
 ```
 
