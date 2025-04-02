@@ -23,6 +23,8 @@ Trustworthy-AI
 ---
 
 ## 📦 Requirements
+
+- Python 3.11.0 required
 ```bash
 pip install -r requirements.txt
 ```
