@@ -7,7 +7,7 @@ from __future__ import print_function
 import argparse
 
 from keras.datasets import mnist
-from keras.layers import Input
+from tensorflow.keras.layers import Input 
 from tensorflow.keras.applications import ResNet50
 from tensorflow.keras.layers import Dense, Flatten, Input
 from tensorflow.keras.models import Model
@@ -19,9 +19,7 @@ from Model2 import Model2
 from Model3 import Model3
 from configs import bcolors
 from utils import *
-
-import tensorflow.compat.v1 as tf
-tf.disable_v2_behavior()
+import tensorflow as tf
 
 # read the parameter
 # argument parsing
@@ -62,124 +60,86 @@ model2 = Model2(input_tensor=input_tensor)
 model3 = Model3(input_tensor=input_tensor)
 
 # init coverage table
-model_layer_dict1, model_layer_dict2, model_layer_dict3 = init_coverage_tables(model1, model2, model3)
+cov1, cov2, cov3 = init_coverage_tables(model1, model2, model3)
 
 # ==============================================================================================
 # start gen inputs
 for _ in range(args.seeds):
-    gen_img = np.expand_dims(random.choice(x_test), axis=0)
-    orig_img = gen_img.copy()
-    # first check if input already induces differences
-    label1, label2, label3 = np.argmax(model1.predict(gen_img)[0]), np.argmax(model2.predict(gen_img)[0]), np.argmax(
-        model3.predict(gen_img)[0])
+    orig_np = np.expand_dims(random.choice(x_test), axis=0)
+    gen_img = tf.Variable(orig_np, dtype=tf.float32)
 
-    if not label1 == label2 == label3:
-        print(bcolors.OKGREEN + 'input already causes different outputs: {}, {}, {}'.format(label1, label2,
-                                                                                            label3) + bcolors.ENDC)
+    # initial predictions
+    p1 = model1.predict(gen_img.numpy())
+    p2 = model2.predict(gen_img.numpy())
+    p3 = model3.predict(gen_img.numpy())
+    l1, l2, l3 = map(lambda p: np.argmax(p[0]), [p1, p2, p3])
 
-        update_coverage(gen_img, model1, model_layer_dict1, args.threshold)
-        update_coverage(gen_img, model2, model_layer_dict2, args.threshold)
-        update_coverage(gen_img, model3, model_layer_dict3, args.threshold)
-
-        print(bcolors.OKGREEN + 'covered neurons percentage %d neurons %.3f, %d neurons %.3f, %d neurons %.3f'
-              % (len(model_layer_dict1), neuron_covered(model_layer_dict1)[2], len(model_layer_dict2),
-                 neuron_covered(model_layer_dict2)[2], len(model_layer_dict3),
-                 neuron_covered(model_layer_dict3)[2]) + bcolors.ENDC)
-        averaged_nc = (neuron_covered(model_layer_dict1)[0] + neuron_covered(model_layer_dict2)[0] +
-                       neuron_covered(model_layer_dict3)[0]) / float(
-            neuron_covered(model_layer_dict1)[1] + neuron_covered(model_layer_dict2)[1] +
-            neuron_covered(model_layer_dict3)[
-                1])
-        print(bcolors.OKGREEN + 'averaged covered neurons %.3f' % averaged_nc + bcolors.ENDC)
-
-        gen_img_deprocessed = deprocess_image(gen_img)
-
-        # save the result to disk
-        # imsave('./generated_inputs/' + 'already_differ_' + str(label1) + '_' + str(
-        #     label2) + '_' + str(label3) + '.png', gen_img_deprocessed)
-
+    # check for early divergence
+    if not (l1 == l2 == l3):
+        # print(bcolors.OKGREEN +
+        #         f'Already diff: {decode_label(p1)} / {decode_label(p2)} / {decode_label(p3)}' +
+        #         bcolors.ENDC)
+        update_coverage(gen_img.numpy(), model1, cov1, args.threshold)
+        update_coverage(gen_img.numpy(), model2, cov2, args.threshold)
+        update_coverage(gen_img.numpy(), model3, cov3, args.threshold)
         continue
 
-    # if all label agrees
-    orig_label = label1
-    layer_name1, index1 = neuron_to_cover(model_layer_dict1)
-    layer_name2, index2 = neuron_to_cover(model_layer_dict2)
-    layer_name3, index3 = neuron_to_cover(model_layer_dict3)
+    orig_label = l1
+    name1, idx1 = neuron_to_cover(cov1)
+    name2, idx2 = neuron_to_cover(cov2)
+    name3, idx3 = neuron_to_cover(cov3)
 
-    # construct joint loss function
-    if args.target_model == 0:
-        loss1 = -args.weight_diff * K.mean(model1.get_layer('before_softmax').output[..., orig_label])
-        loss2 = K.mean(model2.get_layer('before_softmax').output[..., orig_label])
-        loss3 = K.mean(model3.get_layer('before_softmax').output[..., orig_label])
-    elif args.target_model == 1:
-        loss1 = K.mean(model1.get_layer('before_softmax').output[..., orig_label])
-        loss2 = -args.weight_diff * K.mean(model2.get_layer('before_softmax').output[..., orig_label])
-        loss3 = K.mean(model3.get_layer('before_softmax').output[..., orig_label])
-    elif args.target_model == 2:
-        loss1 = K.mean(model1.get_layer('before_softmax').output[..., orig_label])
-        loss2 = K.mean(model2.get_layer('before_softmax').output[..., orig_label])
-        loss3 = -args.weight_diff * K.mean(model3.get_layer('before_softmax').output[..., orig_label])
-    loss1_neuron = K.mean(model1.get_layer(layer_name1).output[..., index1])
-    loss2_neuron = K.mean(model2.get_layer(layer_name2).output[..., index2])
-    loss3_neuron = K.mean(model3.get_layer(layer_name3).output[..., index3])
-    layer_output = (loss1 + loss2 + loss3) + args.weight_nc * (loss1_neuron + loss2_neuron + loss3_neuron)
+    mid1 = tf.keras.Model(inputs=model1.input,
+                            outputs=model1.get_layer(name1).output)
+    mid2 = tf.keras.Model(inputs=model2.input,
+                            outputs=model2.get_layer(name2).output)
+    mid3 = tf.keras.Model(inputs=model3.input,
+                            outputs=model3.get_layer(name3).output)
 
-    # for adversarial image generation
-    final_loss = K.mean(layer_output)
-
-    # we compute the gradient of the input picture wrt this loss
-    grads = normalize(K.gradients(final_loss, input_tensor)[0])
-
-    # this function returns the loss and grads given the input picture
-    iterate = K.function([input_tensor], [loss1, loss2, loss3, loss1_neuron, loss2_neuron, loss3_neuron, grads])
-
-    # we run gradient ascent for 20 steps
-    for iters in range(args.grad_iterations):
-        loss_value1, loss_value2, loss_value3, loss_neuron1, loss_neuron2, loss_neuron3, grads_value = iterate(
-            [gen_img])
+    for _ in range(args.grad_iterations):
+        with tf.GradientTape() as tape:
+            tape.watch(gen_img)
+            out1 = model1(gen_img, training=False)
+            out2 = model2(gen_img, training=False)
+            out3 = model3(gen_img, training=False)
+            # differential loss
+            if args.target_model == 0:
+                loss1 = -args.weight_diff * tf.reduce_mean(out1[..., orig_label])
+                loss2 = tf.reduce_mean(out2[..., orig_label])
+                loss3 = tf.reduce_mean(out3[..., orig_label])
+            elif args.target_model == 1:
+                loss1 = tf.reduce_mean(out1[..., orig_label])
+                loss2 = -args.weight_diff * tf.reduce_mean(out2[..., orig_label])
+                loss3 = tf.reduce_mean(out3[..., orig_label])
+            else:
+                loss1 = tf.reduce_mean(out1[..., orig_label])
+                loss2 = tf.reduce_mean(out2[..., orig_label])
+                loss3 = -args.weight_diff * tf.reduce_mean(out3[..., orig_label])
+            # neuron coverage loss
+            ln1 = mid1(gen_img)[..., idx1]
+            ln2 = mid2(gen_img)[..., idx2]
+            ln3 = mid3(gen_img)[..., idx3]
+            loss_nc = args.weight_nc * (
+                tf.reduce_mean(ln1) + tf.reduce_mean(ln2) + tf.reduce_mean(ln3)
+            )
+            total_loss = loss1 + loss2 + loss3 + loss_nc
+        grads = tape.gradient(total_loss, gen_img)
+        grads = normalize(grads)
+        g_np = grads.numpy()
         if args.transformation == 'light':
-            grads_value = constraint_light(grads_value)  # constraint the gradients value
+            g_np = constraint_light(g_np)
         elif args.transformation == 'occl':
-            grads_value = constraint_occl(grads_value, args.start_point,
-                                          args.occlusion_size)  # constraint the gradients value
-        elif args.transformation == 'blackout':
-            grads_value = constraint_black(grads_value)  # constraint the gradients value
+            g_np = constraint_occl(g_np, tuple(args.start_point), tuple(args.occlusion_size))
+        else:
+            g_np = constraint_black(g_np)
+        gen_img.assign_add(tf.convert_to_tensor(g_np) * args.step)
 
-        gen_img += grads_value * args.step
-        predictions1 = np.argmax(model1.predict(gen_img)[0])
-        predictions2 = np.argmax(model2.predict(gen_img)[0])
-        predictions3 = np.argmax(model3.predict(gen_img)[0])
-
-        if not predictions1 == predictions2 == predictions3:
-            update_coverage(gen_img, model1, model_layer_dict1, args.threshold)
-            update_coverage(gen_img, model2, model_layer_dict2, args.threshold)
-            update_coverage(gen_img, model3, model_layer_dict3, args.threshold)
-
-            print(bcolors.OKGREEN + 'covered neurons percentage %d neurons %.3f, %d neurons %.3f, %d neurons %.3f'
-                  % (len(model_layer_dict1), neuron_covered(model_layer_dict1)[2], len(model_layer_dict2),
-                     neuron_covered(model_layer_dict2)[2], len(model_layer_dict3),
-                     neuron_covered(model_layer_dict3)[2]) + bcolors.ENDC)
-            averaged_nc = (neuron_covered(model_layer_dict1)[0] + neuron_covered(model_layer_dict2)[0] +
-                           neuron_covered(model_layer_dict3)[0]) / float(
-                neuron_covered(model_layer_dict1)[1] + neuron_covered(model_layer_dict2)[1] +
-                neuron_covered(model_layer_dict3)[
-                    1])
-            print(bcolors.OKGREEN + 'averaged covered neurons %.3f' % averaged_nc + bcolors.ENDC)
-
-            gen_img_deprocessed = deprocess_image(gen_img)
-            orig_img_deprocessed = deprocess_image(orig_img)
-
-            # save the result to disk
-            imageio.imwrite(
-                './generated_inputs/' + args.transformation + '_' + str(predictions1) + '_' +
-                str(predictions2) + '_' + str(predictions3) + '.png',
-                gen_img_deprocessed
-            )
-
-            # 두 번째 이미지 저장 (original 이미지)
-            imageio.imwrite(
-                './generated_inputs/' + args.transformation + '_' + str(predictions1) + '_' +
-                str(predictions2) + '_' + str(predictions3) + '_orig.png',
-                orig_img_deprocessed
-            )
+        p1 = model1.predict(gen_img.numpy())
+        p2 = model2.predict(gen_img.numpy())
+        p3 = model3.predict(gen_img.numpy())
+        l1, l2, l3 = map(lambda p: np.argmax(p[0]), [p1, p2, p3])
+        if not (l1 == l2 == l3):
+            update_coverage(gen_img.numpy(), model1, cov1, args.threshold)
+            update_coverage(gen_img.numpy(), model2, cov2, args.threshold)
+            update_coverage(gen_img.numpy(), model3, cov3, args.threshold)
             break
