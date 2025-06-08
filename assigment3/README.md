@@ -1,8 +1,5 @@
 ## assignment3/README.md
 
-````markdown
-# 과제 3 – Marabou 신경망 검증
-
 PyTorch로 학습한 간단한 분류 모델을 ONNX로 변환한 후, Marabou 도구를 사용하여 모델이 특정 조건에서 안정적으로 작동하는지를 형식적으로 검증합니다.
 
 ---
