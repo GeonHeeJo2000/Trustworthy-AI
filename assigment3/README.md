@@ -21,10 +21,8 @@ pip install -r requirements.txt
 ```
 ### 2. Marabou 예제 디렉토리로 이동
 용량 문제로 데이터랑 코드만 병합하면 해당 경로에 추가하면 됩니다.
-```bash
-[cd Marabou/maraboupy/examples/7_wineExample.py](https://github.com/GeonHeeJo2000/Trustworthy-AI/blob/main/assigment3/maraboupy/examples/7_wineExample.py)
-[cd Marabou/maraboupy/examples/winequality-red.csv](https://github.com/GeonHeeJo2000/Trustworthy-AI/blob/main/assigment3/maraboupy/examples/winequality-red.csv)
-```
+[7_wineExample.py](https://github.com/GeonHeeJo2000/Trustworthy-AI/blob/main/assigment3/maraboupy/examples/7_wineExample.py)
+[winequality-red.csv](https://github.com/GeonHeeJo2000/Trustworthy-AI/blob/main/assigment3/maraboupy/examples/winequality-red.csv)
 
 ---
 
