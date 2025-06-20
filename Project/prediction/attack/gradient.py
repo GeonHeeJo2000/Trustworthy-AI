@@ -17,6 +17,7 @@ logger = logging.getLogger(__name__)
 class GradientAttacker(BaseAttacker):
     def __init__(self, obs_length, pred_length, attack_duration, predictor, iter_num=100, learn_rate=0.1, learn_rate_decay=20, bound=1, physical_bounds={}, smooth=0, seed_num=10):
         super().__init__(obs_length, pred_length, attack_duration, predictor)
+        # predictor: <prediction.model.DualTransformer.interface.DualTransformerInterface
         self.iter_num = iter_num
         self.learn_rate = learn_rate
         self.learn_rate_decay = learn_rate_decay
@@ -66,8 +67,8 @@ class GradientAttacker(BaseAttacker):
             loss_not_improved_iter_cnt = 0
 
             for _obj_id in perturbation["value"]:
-                perturbation["value"][_obj_id] = Variable(torch.rand(self.obs_length+self.attack_duration-1,2).cuda() * 2 * self.bound - self.bound)
-                # perturbation["value"][_obj_id] = Variable(torch.zeros(self.obs_length+self.attack_duration-1,2).cuda()).detach()
+                #perturbation["value"][_obj_id] = Variable(torch.rand(self.obs_length+self.attack_duration-1,2).cuda() * 2 * self.bound - self.bound)
+                perturbation["value"][_obj_id] = Variable(torch.rand(self.obs_length,2).cuda() * 2 * self.bound - self.bound)
             
             # opt_Adam = torch.optim.Adam(list(perturbation["value"].values()), lr=self.learn_rate/10 if perturbation["attack_opts"]["type"] in ["ade", "fde"] else self.learn_rate)
 
@@ -77,7 +78,7 @@ class GradientAttacker(BaseAttacker):
                     break
                 total_loss = []
                 total_out = {}
-
+                
                 processed_perturbation = {}
                 for _obj_id in perturbation["value"]:
                     perturbation["value"][_obj_id].requires_grad = True
@@ -96,7 +97,8 @@ class GradientAttacker(BaseAttacker):
                     output_data, loss = self.predictor.run(input_data, perturbation=perturbation, backward=True)
                     total_out[k] = output_data
                     total_loss.append(loss)
-                dd
+                    
+                
                 loss = sum(total_loss)
 
                 if loss.item() < best_loss:

@@ -8,7 +8,7 @@ def multi_frame_prediction(data, api, duration):
     입출력 형태를 유지하기 위함: 어차피 perturbation=None으로 제공해서 input_data=output_data가 같음
     '''
     outputs = {}
-    
+
     for k in tqdm(range(duration), desc="Multi-frame prediction"):
         # input_data: objecy: {'1'(agent number): 
         # {'type': 3(타고있는 것), 
@@ -24,7 +24,7 @@ def multi_frame_prediction(data, api, duration):
         output_data = api.run(input_data, perturbation=None, backward=False)
 
         outputs[str(k)] = output_data
-    
+
     return {
         "attack_length": duration,
         "output_data": outputs
@@ -79,7 +79,7 @@ def CUSUM(trace_array, opts):
             if m * last_m < 0:
                 s = max(0, s + abs(m-last_m)/opts["scale"] - opts["d"])
             last_m = m
-        # print(s)
+      
         if s > opts["t"]:
             result = True
     

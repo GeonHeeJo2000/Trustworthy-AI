@@ -9,7 +9,7 @@ class DFLDataset(BaseDataset):
     def __init__(self, obs_length, pred_length, time_step=0.5, sample_step=1):
         super().__init__(obs_length, pred_length, time_step)
 
-        self.data_dir =  os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../data/apolloscape/")
+        self.data_dir =  os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../data/dfl/")
         self.test_data_dir = os.path.join(self.data_dir, "prediction_test")
         self.val_data_dir = os.path.join(self.data_dir, "prediction_val")
         self.train_data_dir = os.path.join(self.data_dir, "prediction_train")
@@ -29,10 +29,10 @@ class DFLDataset(BaseDataset):
         self.feature_dimension = 5
         self.sample_step = sample_step
 
-        self.xy_mean = np.array([127.4431223, 102.740081])
-        self.xy_std = np.array([124.44508522, 71.96368189])
-        self.xy_min = np.array([0.389, 0.674])
-        self.xy_max = np.array([708.908, 348.585])
+        self.xy_mean = np.array([51.433071, 32.701925])
+        self.xy_std = np.array([26.385373, 20.418240])
+        self.xy_min = np.array([0.0, 0.0])
+        self.xy_max = np.array([105,0, 68.0])
 
         self.xy_distribution = {
             "mean": self.xy_mean,
@@ -42,26 +42,26 @@ class DFLDataset(BaseDataset):
         }
 
         self.bounds = {
-            "scalar_v": 10.539,
-            "linear_a": 4.957,
-            "rotate_a": 0.956,
-            "linear_aa": 8.418,
-            "rotate_aa": 1.577
+            "scalar_v": 12,#10.539,
+            "linear_a": 8,#4.957,
+            # "rotate_a": 0.956,
+            # "linear_aa": 8.418,
+            # "rotate_aa": 1.577
         }
 
-        self.detect_opts = {
-            "long": {
-                "d": 0.36,
-                "t": 0.15,
-                "scale": self.bounds["linear_a"]
-            },
-            "lat": {
-                "d": 0.36,
-                "t": 0.15,
-                "scale": self.bounds["rotate_a"]
-            },
-            "thres": 0.02
-        }
+        # self.detect_opts = {
+        #     "long": {
+        #         "d": 0.36,
+        #         "t": 0.15,
+        #         "scale": self.bounds["linear_a"]
+        #     },
+        #     "lat": {
+        #         "d": 0.36,
+        #         "t": 0.15,
+        #         "scale": self.bounds["rotate_a"]
+        #     },
+        #     "thres": 0.02
+        # }
 
     def format_data(self, data_dir, allow_incomplete_traces=True, allow_invisible_objects=True, require_one_complete=True, require_one_visible=True):
         files = os.listdir(data_dir)

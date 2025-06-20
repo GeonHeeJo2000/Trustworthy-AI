@@ -1,12 +1,17 @@
 import torch
 
+# def ade(predict_trace, future_trace):
+#     return (torch.sum(torch.square(predict_trace - future_trace)) / predict_trace.shape[0])
+#     #return (torch.mean(torch.square(predict_trace - future_trace)) / predict_trace.shape[0])
+
 def ade(predict_trace, future_trace):
-    return (torch.sum(torch.square(predict_trace - future_trace)) / predict_trace.shape[0])
+    return torch.mean(torch.norm(predict_trace - future_trace, dim=1))
 
-
+# def fde(predict_trace, future_trace):
+#     return torch.sum(torch.square(predict_trace[-1,:] - future_trace[-1,:]))
+#     #return torch.mean(torch.square(predict_trace[-1,:] - future_trace[-1,:]))
 def fde(predict_trace, future_trace):
-    return torch.sum(torch.square(predict_trace[-1,:] - future_trace[-1,:]))
-
+    return torch.norm(predict_trace[-1] - future_trace[-1])
 
 def perturbation_cost(perturbation):
     return torch.sum(torch.square(torch.absolute(perturbation)+1))
@@ -93,6 +98,7 @@ def attack_loss(observe_traces, future_traces, predict_traces, obj_id, perturbat
 
     if "type" in attack_opts:
         attack_goal = attack_opts["type"]
+        
         if attack_goal == "ade":
             loss -= attack_opts["attack_goal_c"] * ade(predict_traces[obj_id], future_traces[obj_id])
         elif attack_goal == "fde":

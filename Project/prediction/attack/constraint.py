@@ -51,6 +51,7 @@ def hard_constraint(observe_trace_array, perturbation_tensor, hard_bound, physic
     '''
     비현실적 궤적 방지, 물리적으로 허용 가능한 perturbation 크기 조정
     '''
+    print(observe_trace_array.shape,perturbation_tensor.shape)
     if not isinstance(perturbation_tensor, np.ndarray):
         perturbation_array = perturbation_tensor.cpu().detach().numpy()
     else:
@@ -65,9 +66,11 @@ def hard_constraint(observe_trace_array, perturbation_tensor, hard_bound, physic
             break
         merged_trace_array = copy.deepcopy(observe_trace_array)
         merged_trace_array[:perturbation_array.shape[0],:] += theta * perturbation_array
+        #merged_trace_array[:20,:] += theta * perturbation_array[:20, :]
         scalar_v, linear_a, rotate_a, linear_aa, rotate_aa = get_metrics(merged_trace_array)
         deviation = get_deviation(theta * perturbation_array)
-        check_pass = (np.sum(scalar_v > physical_bounds["scalar_v"]) == 0 and np.sum(linear_a > physical_bounds["linear_a"]) == 0 and np.sum(rotate_a > physical_bounds["rotate_a"]) == 0 and np.sum(linear_aa > physical_bounds["linear_aa"]) == 0 and np.sum(rotate_aa > physical_bounds["rotate_aa"]) == 0 and np.sum(deviation > hard_bound) == 0) 
+        # check_pass = (np.sum(scalar_v > physical_bounds["scalar_v"]) == 0 and np.sum(linear_a > physical_bounds["linear_a"]) == 0 and np.sum(rotate_a > physical_bounds["rotate_a"]) == 0 and np.sum(linear_aa > physical_bounds["linear_aa"]) == 0 and np.sum(rotate_aa > physical_bounds["rotate_aa"]) == 0 and np.sum(deviation > hard_bound) == 0) 
+        check_pass = (np.sum(scalar_v > physical_bounds["scalar_v"]) == 0 and np.sum(linear_a > physical_bounds["linear_a"]) == 0 and np.sum(deviation > hard_bound) == 0) 
     return perturbation_tensor * theta
 
 

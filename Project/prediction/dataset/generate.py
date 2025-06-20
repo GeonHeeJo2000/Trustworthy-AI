@@ -5,40 +5,29 @@ import copy
 
 from .utils import json_to_data
 
-
 def add_flags(data):
     delete_obj_ids = []
     for obj_id, obj in data["objects"].items():
-        obj["observe_mask"] = (obj["observe_trace"][:,0] > 0).astype(np.int64)
-        obj["future_mask"] = (obj["future_trace"][:,0] > 0).astype(np.int64)
-        
-        if np.sum(obj["observe_mask"]) == 0:
+        observe_trace = np.asarray(obj["observe_trace"])   # shape (T_obs, 2)
+        future_trace = np.asarray(obj["future_trace"])    # shape (T_pred, 2)
+
+        # mask 생성
+        obj["observe_mask"] = (~np.any(np.isnan(observe_trace), axis=1)).astype(np.int64).tolist()  # (T_obs, )
+        obj["future_mask"]  = (~np.any(np.isnan(future_trace), axis=1)).astype(np.int64).tolist()  # (T_pred, )
+
+        obj["complete"] = bool(not np.any(np.isnan(np.concatenate((observe_trace, future_trace), axis=0))))  # 전체가 NaN이 아니면 True
+        obj["visible"]  = bool(not np.any(np.isnan(np.concatenate((observe_trace, future_trace), axis=0))))  # 전체가 NaN이 아니면 True
+
+        if not obj["visible"]:
             delete_obj_ids.append(obj_id)
             continue
 
-        if np.min(np.concatenate((obj["observe_mask"], obj["future_mask"]), axis=0)) <= 0:
-            obj["complete"] = False
-        else:
-            obj["complete"] = True
-
-        if np.min(obj["observe_mask"][-1]) <= 0:
-            obj["visible"] = False
-        else:
-            obj["visible"] = True
-
         obj["static"] = False
-        trace = obj["observe_trace"][obj["observe_mask"]>0,:]
-        if trace.shape[0] > 1:
-            v = trace[1:,:] - trace[:-1,:]
-            v = np.sum(v ** 2, axis=1)
-            if np.sum(v > 0) < v.shape[0]:
-                obj["static"] = True
 
     for obj_id in delete_obj_ids:
         del data["objects"][obj_id]
     
     return data
-
 
 # deprecated
 def output_data_online_generator(api):
@@ -85,12 +74,16 @@ def input_data_by_attack_step(data, obs_length, pred_length, attack_step):
     
     k = attack_step
     for _obj_id, obj in data["objects"].items():
-        feature = obj["observe_feature"]
-        observe_feature = copy.deepcopy(feature[k:k+obs_length,:])
-        future_feature = copy.deepcopy(feature[k+obs_length:k+obs_length+pred_length,:])
+        feature = np.asarray(obj["observe_feature"])  # shape (T, 2)
+
+        # observe_feature = copy.deepcopy(feature[k:k+obs_length, :2].tolist())
+        # future_feature = copy.deepcopy(feature[k+obs_length:k+obs_length+pred_length, :2].tolist())
+        observe_feature = copy.deepcopy(feature[k:k+obs_length, :2])
+        future_feature = copy.deepcopy(feature[k+obs_length:k+obs_length+pred_length, :2])
         trace = obj["observe_trace"]
-        observe_trace = copy.deepcopy(trace[k:k+obs_length,:])
-        future_trace = copy.deepcopy(trace[k+obs_length:k+obs_length+pred_length,:])
+        observe_trace = copy.deepcopy(trace[k:k+obs_length])
+        future_trace = copy.deepcopy(trace[k+obs_length:k+obs_length+pred_length])
+
         new_obj = {
             "type": int(obj["type"]),
             "observe_feature": observe_feature,
@@ -100,6 +93,7 @@ def input_data_by_attack_step(data, obs_length, pred_length, attack_step):
             "predict_trace": np.zeros((pred_length,2)),
         }
         input_data["objects"][_obj_id] = new_obj
-    
+
     input_data = add_flags(input_data)
+
     return input_data
